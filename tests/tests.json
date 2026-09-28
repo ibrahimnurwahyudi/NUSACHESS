@@ -1,0 +1,90 @@
+[
+  {
+    "name": "Diagnosis AI dan sesi latihan perhitungan",
+    "sanity": true,
+    "viewport": "desktop",
+    "covers": [
+      "Taktik diagnosis rinci",
+      "Perhitungan diagnosis rinci",
+      "Pelatih AI",
+      "sesi latihan perhitungan",
+      "papan catur standar"
+    ],
+    "description": "Memastikan indikator latihan membuka diagnosis profesional dan tombol pelatih masuk ke sesi latihan, bukan hanya skor.",
+    "steps": [
+      "Masuk ke NUSACHESS",
+      "Buka Latihan",
+      "Klik Perhitungan",
+      "Buka Pelatih AI",
+      "Klik Mulai latihan perhitungan"
+    ],
+    "expected": "Diagnosis menampilkan metrik, temuan, rencana latihan, lalu sesi latihan menampilkan papan 8x8, tahapan berpikir, dan tugas."
+  },
+  {
+    "name": "Ruang analisis permainan",
+    "viewport": "desktop",
+    "covers": [
+      "analisis mesin",
+      "deteksi kesalahan",
+      "pengenalan pembukaan",
+      "laporan performa"
+    ],
+    "description": "Memastikan pusat analisis menyediakan laporan terstruktur untuk beberapa jenis analisis.",
+    "steps": [
+      "Buka Bermain",
+      "Pilih Analisis mesin",
+      "Pilih Deteksi kesalahan",
+      "Pilih Pengenalan pembukaan",
+      "Pilih Laporan performa"
+    ],
+    "expected": "Setiap pilihan membuka ringkasan, metrik, temuan, dan rekomendasi."
+  },
+  {
+    "name": "Interaksi papan catur standar",
+    "viewport": "mobile",
+    "covers": [
+      "papan 8x8",
+      "koordinat papan",
+      "pemilihan petak",
+      "navigasi ponsel"
+    ],
+    "description": "Memastikan papan tetap berbentuk persegi dengan kotak seragam dan dapat menerima interaksi pada ponsel.",
+    "steps": [
+      "Masuk",
+      "Buka Bermain",
+      "Pilih satu petak",
+      "Pilih petak tujuan",
+      "Buka menu ponsel lalu Latihan"
+    ],
+    "expected": "Papan tetap 8x8 dengan proporsi 1:1, petak seragam, dan menu menutup setelah navigasi."
+  },
+  {
+    "name": "Diagnosis DNA dan paspor atlet",
+    "viewport": "desktop",
+    "covers": [
+      "DNA Catur",
+      "hasil dimensi",
+      "Paspor Atlet"
+    ],
+    "description": "Memastikan data pengembangan pemain dapat dibuka sebagai modul informasi.",
+    "steps": [
+      "Buka Profil",
+      "Klik Perhitungan pada DNA Catur",
+      "Klik Riwayat kompetisi pada Paspor Atlet"
+    ],
+    "expected": "Detail dimensi dan modul paspor terbuka tanpa menjadi tombol mati."
+  },
+  {
+    "name": "Validasi backend permainan",
+    "viewport": "desktop",
+    "covers": [
+      "POST /api/games",
+      "validasi backend"
+    ],
+    "description": "Memastikan alur penyimpanan permainan tetap memiliki validasi server.",
+    "steps": [
+      "Kirim data permainan tanpa hasil"
+    ],
+    "expected": "Backend menolak data yang tidak valid dengan status 400."
+  }
+]
