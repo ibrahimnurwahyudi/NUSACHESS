@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, auth, ws } from '@appdeploy/client';
 import { Activity, Award, BarChart3, Bell, Brain, Building2, CalendarDays, ChevronRight, CircleUserRound, Crown, Flag, GraduationCap, LayoutGrid, LogIn, Menu, Network, Play, ShieldCheck, Swords, Target, Trophy, Users, X, Zap } from 'lucide-react';
 
+const DEMO_USER={userId:'demo-nusachess',name:'NUSACHESS Player',email:'player@nusachess.local'};
+const DEMO_DATA={clubs:[{id:'c1',name:'Nusantara Chess Club',region:'Jawa Timur',members:84,type:'Club'},{id:'c2',name:'Jakarta Chess Collective',region:'DKI Jakarta',members:126,type:'Community'},{id:'c3',name:'Sumatera Chess Academy',region:'Sumatera Utara',members:61,type:'Academy'}],tournaments:[{id:'t1',name:'NUSACHESS Open Series 01',format:'Swiss',location:'Online',date:'12 Oct 2026',status:'Registration'},{id:'t2',name:'Nusantara Rapid Cup',format:'Rapid',location:'Surabaya',date:'24 Oct 2026',status:'Upcoming'},{id:'t3',name:'NUSACHESS League · Season 01',format:'Team',location:'Hybrid',date:'Nov 2026',status:'Planning'}],signals:[{id:'f1',player:'Sample review queue',signal:'Move-time anomaly',risk:'Medium',status:'Human review'}],players:[{id:'p1',name:'NUSACHESS Player',rating:1284,club:'Nusantara Chess Club',status:'Active'},{id:'p2',name:'Development Candidate',rating:1512,club:'Jakarta Chess Collective',status:'Active'},{id:'p3',name:'Junior Player',rating:1198,club:'Sumatera Chess Academy',status:'Development'}]};
+const api={get:async(path:string)=>path==='/api/ecosystem'?{data:DEMO_DATA}:path==='/api/me'?{data:{stats:{rating:1284,games:Number(localStorage.getItem('nusa_games')||0),streak:7}}}:{data:{}},post:async(path:string)=>{if(path==='/api/games'){const games=Number(localStorage.getItem('nusa_games')||0)+1;localStorage.setItem('nusa_games',String(games));return {data:{stats:{rating:1284,games,streak:7}}}}return {data:{ok:true}}}};
+const auth={getUser:async()=>localStorage.getItem('nusa_user')?DEMO_USER:null,signIn:async()=>{localStorage.setItem('nusa_user','1');return {user:DEMO_USER}},signOut:async()=>{localStorage.removeItem('nusa_user')}};
+const ws={connect:()=>({onMessage:(_:any)=>{},onError:(_:any)=>{},disconnect:()=>{}})};
 type User={userId:string;name?:string;email?:string;picture?:string};
 type Surface='player'|'portal'|'command';
 type PlayerView='home'|'play'|'train'|'compete'|'community'|'profile';
