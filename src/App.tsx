@@ -1,10 +1,56 @@
 import { useEffect, useRef, useState } from 'react';
+import { createClient } from '@supabase/supabase-js';
 import { Activity, Award, BarChart3, Bell, Brain, Building2, CalendarDays, ChevronRight, CircleUserRound, Crown, Flag, GraduationCap, LayoutGrid, LogIn, Menu, Network, Play, ShieldCheck, Swords, Target, Trophy, Users, X, Zap } from 'lucide-react';
 
-const DEMO_USER={userId:'demo-nusachess',name:'NUSACHESS Player',email:'player@nusachess.local'};
-const DEMO_DATA={clubs:[{id:'c1',name:'Nusantara Chess Club',region:'Jawa Timur',members:84,type:'Club'},{id:'c2',name:'Jakarta Chess Collective',region:'DKI Jakarta',members:126,type:'Community'},{id:'c3',name:'Sumatera Chess Academy',region:'Sumatera Utara',members:61,type:'Academy'}],tournaments:[{id:'t1',name:'NUSACHESS Open Series 01',format:'Swiss',location:'Online',date:'12 Oct 2026',status:'Registration'},{id:'t2',name:'Nusantara Rapid Cup',format:'Rapid',location:'Surabaya',date:'24 Oct 2026',status:'Upcoming'},{id:'t3',name:'NUSACHESS League · Season 01',format:'Team',location:'Hybrid',date:'Nov 2026',status:'Planning'}],signals:[{id:'f1',player:'Sample review queue',signal:'Move-time anomaly',risk:'Medium',status:'Human review'}],players:[{id:'p1',name:'NUSACHESS Player',rating:1284,club:'Nusantara Chess Club',status:'Active'},{id:'p2',name:'Development Candidate',rating:1512,club:'Jakarta Chess Collective',status:'Active'},{id:'p3',name:'Junior Player',rating:1198,club:'Sumatera Chess Academy',status:'Development'}]};
-const api={get:async(path:string)=>path==='/api/ecosystem'?{data:DEMO_DATA}:path==='/api/me'?{data:{stats:{rating:1284,games:Number(localStorage.getItem('nusa_games')||0),streak:7}}}:{data:{}},post:async(path:string)=>{if(path==='/api/games'){const games=Number(localStorage.getItem('nusa_games')||0)+1;localStorage.setItem('nusa_games',String(games));return {data:{stats:{rating:1284,games,streak:7}}}}return {data:{ok:true}}}};
-const auth={getUser:async()=>localStorage.getItem('nusa_user')?DEMO_USER:null,signIn:async()=>{localStorage.setItem('nusa_user','1');return {user:DEMO_USER}},signOut:async()=>{localStorage.removeItem('nusa_user')}};
+const SUPABASE_URL=import.meta.env.VITE_SUPABASE_URL||'https://nuxobzktnnxuxxfjlfrc.supabase.co';
+const SUPABASE_KEY=import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY||'sb_publishable_5HevfXceboIaDjYFR06eFQ_eSbnuCpY';
+const supabase=createClient(SUPABASE_URL,SUPABASE_KEY);
+const api={
+ get:async(path:string)=>{
+   if(path==='/api/me'){
+     const {data:{user}}=await supabase.auth.getUser();
+     if(!user)return {data:null};
+     const {data:p}=await supabase.from('profiles').select('*').eq('id',user.id).maybeSingle();
+     const profile=p||{id:user.id,display_name:user.user_metadata?.full_name||user.email?.split('@')[0]||'Pemain',email:user.email,rating:1200,games_played:0,streak:0};
+     return {data:{profile,stats:{rating:profile.rating,games:profile.games_played,streak:profile.streak}}};
+   }
+   if(path==='/api/ecosystem'){
+     const [clubs,tournaments,signals,players]=await Promise.all([
+       supabase.from('clubs').select('*').order('members',{ascending:false}),
+       supabase.from('tournaments').select('*').order('event_date',{ascending:true}),
+       supabase.from('audit_logs').select('*').eq('entity_type','fair_play').order('created_at',{ascending:false}).limit(20),
+       supabase.from('demo_players').select('*').order('rating',{ascending:false}).limit(100)
+     ]);
+     return {data:{clubs:clubs.data||[],tournaments:(tournaments.data||[]).map((x:any)=>({...x,date:x.event_date||'TBD'})),signals:signals.data||[],players:players.data||[],meta:{core:'NUSACHESS Core',realtime:true}}};
+   }
+   return {data:{}};
+ },
+ post:async(path:string,body:any)=>{
+   if(path==='/api/games'){
+     const {data:{user}}=await supabase.auth.getUser();
+     if(!user)throw new Error('Silakan masuk terlebih dahulu.');
+     const {error:e}=await supabase.from('games').insert({user_id:user.id,result:body.result,from_square:body.from,to_square:body.to});
+     if(e)throw e;
+     const {data:p}=await supabase.from('profiles').select('*').eq('id',user.id).maybeSingle();
+     const next={rating:p?.rating||1200,games:(p?.games_played||0)+1,streak:p?.streak||0};
+     const {error:u}=await supabase.from('profiles').upsert({id:user.id,email:user.email,display_name:p?.display_name||user.user_metadata?.full_name||'Pemain',rating:next.rating,games_played:next.games,streak:next.streak,updated_at:new Date().toISOString()});
+     if(u)throw u;
+     return {data:{stats:next}};
+   }
+   return {data:{ok:true}};
+ }
+};
+const auth={
+ getUser:async()=>{const {data:{user}}=await supabase.auth.getUser();return user?{userId:user.id,name:user.user_metadata?.full_name||user.email?.split('@')[0],email:user.email,picture:user.user_metadata?.avatar_url}:null;},
+ signIn:async({email}:{email?:string})=>{
+   const target=email||window.prompt('Masukkan email NUSACHESS:')||'';
+   if(!target)throw new Error('Email diperlukan.');
+   const {error}=await supabase.auth.signInWithOtp({email:target,options:{emailRedirectTo:window.location.origin}});
+   if(error)throw error;
+   return {user:null};
+ },
+ signOut:async()=>{await supabase.auth.signOut();}
+};
 const ws={connect:()=>({onMessage:(_:any)=>{},onError:(_:any)=>{},disconnect:()=>{}})};
 type User={userId:string;name?:string;email?:string;picture?:string};
 type Surface='player'|'portal'|'command';
@@ -18,13 +64,13 @@ const cnav:[CommandView,string,any][]=[['overview','Pusat Kendali',LayoutGrid],[
 export default function App(){
  const [user,setUser]=useState<User|null>(null),[surface,setSurface]=useState<Surface>('player'),[pv,setPv]=useState<PlayerView>('home'),[cv,setCv]=useState<CommandView>('overview'),[menu,setMenu]=useState(false),[msg,setMsg]=useState('Inti NUSACHESS siap digunakan'),[stats,setStats]=useState({rating:1284,games:0,streak:7}),[data,setData]=useState<any>({}),[board,setBoard]=useState(board0),[sel,setSel]=useState<[number,number]|null>(null);
  const sock=useRef<ReturnType<typeof ws.connect>|null>(null);
- useEffect(()=>{auth.getUser().then(u=>u&&setUser(u)).catch(()=>{});},[]);
+ useEffect(()=>{auth.getUser().then(u=>u&&setUser(u)).catch(()=>{}); const {data}=supabase.auth.onAuthStateChange((event,session)=>{ if(session?.user){setUser({userId:session.user.id,name:session.user.user_metadata?.full_name||session.user.email?.split('@')[0],email:session.user.email,picture:session.user.user_metadata?.avatar_url});} else if(event==='SIGNED_OUT'){setUser(null);} }); return()=>data.subscription.unsubscribe();},[]);
  useEffect(()=>{if(!user)return;api.get('/api/me').then(r=>r.data?.stats&&setStats(s=>({...s,...r.data.stats}))).catch(()=>{});load();
   const c=ws.connect();sock.current=c;c.onMessage(m=>{if(m?.type==='entity.update'){setMsg('Data ekosistem diperbarui.');load();}});c.onError(()=>setMsg('Koneksi langsung sedang tersambung kembali.'));
   return()=>c.disconnect();
  },[user]);
  async function load(){api.get('/api/ecosystem').then(r=>setData(r.data||{})).catch(()=>{});}
- async function login(){try{const r=await auth.signIn({scope:'openid email profile'});setUser(r.user);setMsg('Selamat datang di NUSACHESS.');}catch(e){setMsg(e instanceof Error?e.message:'Masuk dibatalkan.');}}
+ async function login(){try{await auth.signIn({});setMsg('Tautan masuk telah dikirim. Periksa email Anda.');}catch(e){setMsg(e instanceof Error?e.message:'Masuk dibatalkan.');}}
  async function logout(){await auth.signOut();setUser(null);setSurface('player');setMsg('Anda telah keluar.');}
  function move(r:number,c:number){if(!sel){if(board[r][c])setSel([r,c]);return;}const[sr,sc]=sel;if(sr===r&&sc===c){setSel(null);return;}const n=board.map(x=>[...x]);n[r][c]=n[sr][sc];n[sr][sc]='';setBoard(n);setSel(null);api.post('/api/games',{result:'training_move',from:[sr,sc],to:[r,c]}).then(x=>x.data?.stats&&setStats(s=>({...s,...x.data.stats}))).catch(()=>setMsg('Sinkronisasi gagal; langkah tetap ditampilkan.'));}
  if(!user)return <Landing login={login}/>;
