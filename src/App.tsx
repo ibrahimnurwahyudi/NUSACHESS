@@ -51,7 +51,11 @@ const auth={
  },
  signOut:async()=>{await supabase.auth.signOut();}
 };
-const ws={connect:()=>({onMessage:(_:any)=>{},onError:(_:any)=>{},disconnect:()=>{}})};
+const ws={connect:()=>{
+  const channel=supabase.channel('nusachess-live').on('postgres_changes',{event:'*',schema:'public'},payload=>listeners.forEach(fn=>fn(payload))).subscribe();
+  const listeners:Array<(payload:any)=>void>=[];
+  return {onMessage:(fn:(payload:any)=>void)=>{listeners.push(fn)},onError:(fn:(err:any)=>void)=>{if(channel){}},disconnect:()=>{supabase.removeChannel(channel)}};
+}};
 type User={userId:string;name?:string;email?:string;picture?:string};
 type Surface='player'|'portal'|'command';
 type PlayerView='home'|'play'|'train'|'compete'|'community'|'profile';
